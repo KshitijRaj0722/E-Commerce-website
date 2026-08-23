@@ -1,0 +1,39 @@
+# Render Blueprint for the Spring Boot backend.
+#
+# This is a monorepo: the backend lives in ./backend, so rootDir points there and
+# every other path below is relative to it. If you configure the service through
+# the Render dashboard instead of this Blueprint, set "Root Directory" to
+# `backend` there — otherwise Render looks for the Dockerfile at the repo root
+# and the build fails.
+#
+# NOTE: Render's free managed databases are PostgreSQL only. This app uses MySQL,
+# so provision a free external MySQL (Aiven / Railway / Clever Cloud) and paste its
+# connection details into the environment variables below via the Render dashboard.
+services:
+  - type: web
+    name: ecommerce-backend
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /swagger-ui/index.html
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: DB_URL
+        sync: false   # Postgres: jdbc:postgresql://<host>:<port>/<db>
+      - key: DB_DRIVER
+        value: org.postgresql.Driver
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false   # your Vercel URL, e.g. https://your-app.vercel.app
