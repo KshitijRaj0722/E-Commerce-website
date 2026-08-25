@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { apiError } from '../utils/errors';
 
 const s = {
   wrap: { maxWidth: 400, margin: '80px auto', background: '#fff', padding: '2rem', borderRadius: 8, boxShadow: '0 2px 12px rgba(0,0,0,0.1)' },
@@ -25,7 +26,7 @@ export default function Register() {
       authLogin(data);
       navigate('/products');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      setError(apiError(err, 'Registration failed'));
     }
   };
 

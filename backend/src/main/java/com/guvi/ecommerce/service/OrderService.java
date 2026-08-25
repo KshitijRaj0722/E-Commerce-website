@@ -104,9 +104,18 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderResponse verifyPayment(String razorpayOrderId, String razorpayPaymentId, String razorpaySignature) {
+    public OrderResponse verifyPayment(String email, String razorpayOrderId,
+                                       String razorpayPaymentId, String razorpaySignature) {
         Order order = orderRepository.findByRazorpayOrderId(razorpayOrderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        // Confirm the caller owns this order before touching its status. Without this
+        // any authenticated user who knows a razorpayOrderId could submit a bad
+        // signature and flip somebody else's order to FAILED.
+        if (!order.getUser().getEmail().equals(email)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "This order belongs to another user");
+        }
 
         // Verify signature
         String generatedSignature = hmacSHA256(razorpayOrderId + "|" + razorpayPaymentId, razorpayKeySecret);

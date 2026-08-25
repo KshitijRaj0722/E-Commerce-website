@@ -20,6 +20,7 @@ public class CartService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
 
+    @Transactional(readOnly = true)
     public List<CartItemResponse> getCart(String email) {
         User user = getUser(email);
         return cartItemRepository.findByUser(user).stream()
@@ -27,6 +28,7 @@ public class CartService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public CartItemResponse addToCart(String email, CartRequest request) {
         User user = getUser(email);
         Product product = productRepository.findById(request.getProductId())
@@ -45,6 +47,7 @@ public class CartService {
         return CartItemResponse.from(cartItemRepository.save(item));
     }
 
+    @Transactional
     public CartItemResponse updateCartItem(String email, Long itemId, Integer quantity) {
         if (quantity == null || quantity < 1) {
             throw new BadRequestException("Quantity must be at least 1");
@@ -55,6 +58,7 @@ public class CartService {
         return CartItemResponse.from(cartItemRepository.save(item));
     }
 
+    @Transactional
     public void removeFromCart(String email, Long itemId) {
         cartItemRepository.delete(getOwnedItem(email, itemId));
     }

@@ -90,7 +90,7 @@ class OrderControllerTest {
     @Test
     @WithMockUser(username = "buyer@test.com")
     void verifyPayment_returnsPaidOrder() throws Exception {
-        when(orderService.verifyPayment("order_ABC", "pay_XYZ", "sig")).thenReturn(sampleOrder());
+        when(orderService.verifyPayment("buyer@test.com", "order_ABC", "pay_XYZ", "sig")).thenReturn(sampleOrder());
 
         mockMvc.perform(post("/api/orders/verify-payment")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -103,7 +103,7 @@ class OrderControllerTest {
     @Test
     @WithMockUser(username = "buyer@test.com")
     void verifyPayment_badSignature_returns400() throws Exception {
-        when(orderService.verifyPayment(any(), any(), any()))
+        when(orderService.verifyPayment(any(), any(), any(), any()))
                 .thenThrow(new BadRequestException("Payment verification failed"));
 
         mockMvc.perform(post("/api/orders/verify-payment")

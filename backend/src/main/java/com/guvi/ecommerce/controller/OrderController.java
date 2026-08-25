@@ -31,8 +31,10 @@ public class OrderController {
     }
 
     @PostMapping("/verify-payment")
-    public ResponseEntity<OrderResponse> verifyPayment(@RequestBody PaymentVerifyRequest request) {
+    public ResponseEntity<OrderResponse> verifyPayment(@AuthenticationPrincipal UserDetails user,
+                                                       @RequestBody PaymentVerifyRequest request) {
         return ResponseEntity.ok(orderService.verifyPayment(
+                user.getUsername(),
                 request.getRazorpayOrderId(),
                 request.getRazorpayPaymentId(),
                 request.getRazorpaySignature()));

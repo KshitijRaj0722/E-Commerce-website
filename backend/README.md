@@ -17,7 +17,7 @@ All secrets are read from environment variables (with local fallbacks). Set thes
 | `DB_URL` | JDBC URL | `jdbc:mysql://localhost:3306/ecommerce_db?...` |
 | `DB_USERNAME` | DB user | `root` |
 | `DB_PASSWORD` | DB password | _(empty)_ |
-| `JWT_SECRET` | JWT signing secret | dev default |
+| `JWT_SECRET` | JWT signing secret — **must be at least 32 characters** | dev default |
 | `RAZORPAY_KEY_ID` | Razorpay key id | placeholder |
 | `RAZORPAY_KEY_SECRET` | Razorpay key secret | placeholder |
 | `PORT` | Server port | `8080` |
@@ -25,6 +25,12 @@ All secrets are read from environment variables (with local fallbacks). Set thes
 | `ADMIN_EMAIL` | Seeded admin email | `admin@guvi.com` |
 | `ADMIN_PASSWORD` | Seeded admin password | `Admin@123` |
 | `ADMIN_SEED_ENABLED` | Seed an admin on startup | `true` |
+| `JPA_SHOW_SQL` | Log every SQL statement | `false` |
+
+> **`JWT_SECRET` length matters.** HS256 signing keys must be ≥ 256 bits, so a
+> secret shorter than 32 characters makes the app throw `WeakKeyException` on the
+> first login attempt — the service starts fine and only fails when someone tries
+> to sign in, which makes it easy to misdiagnose. Use a long random string.
 
 ## Run Locally
 ```bash

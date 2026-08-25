@@ -112,7 +112,7 @@ class OrderServiceTest {
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
         OrderResponse result = orderService.verifyPayment(
-                "order_ABC", "pay_XYZ", sign("order_ABC", "pay_XYZ"));
+                "buyer@test.com", "order_ABC", "pay_XYZ", sign("order_ABC", "pay_XYZ"));
 
         assertThat(result.getStatus()).isEqualTo("PAID");
         assertThat(result.getRazorpayPaymentId()).isEqualTo("pay_XYZ");
@@ -127,7 +127,7 @@ class OrderServiceTest {
         when(orderRepository.findByRazorpayOrderId("order_ABC")).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        assertThatThrownBy(() -> orderService.verifyPayment("order_ABC", "pay_XYZ", "not-the-signature"))
+        assertThatThrownBy(() -> orderService.verifyPayment("buyer@test.com", "order_ABC", "pay_XYZ", "not-the-signature"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("verification failed");
 
@@ -143,10 +143,25 @@ class OrderServiceTest {
         when(orderRepository.findByRazorpayOrderId("order_ABC")).thenReturn(Optional.of(alreadyPaid));
 
         OrderResponse result = orderService.verifyPayment(
-                "order_ABC", "pay_XYZ", sign("order_ABC", "pay_XYZ"));
+                "buyer@test.com", "order_ABC", "pay_XYZ", sign("order_ABC", "pay_XYZ"));
 
         assertThat(result.getStatus()).isEqualTo("PAID");
         assertThat(product.getStock()).isEqualTo(10);
+        verify(productRepository, never()).save(any());
+    }
+
+    @Test
+    void verifyPayment_anotherUsersOrder_isDeniedWithoutChangingStatus() throws Exception {
+        Order order = orderWithItems(Order.OrderStatus.CREATED);
+        when(orderRepository.findByRazorpayOrderId("order_ABC")).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.verifyPayment(
+                "intruder@test.com", "order_ABC", "pay_XYZ", "any-signature"))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+
+        // the intruder must not be able to flip somebody else's order to FAILED
+        assertThat(order.getStatus()).isEqualTo(Order.OrderStatus.CREATED);
+        verify(orderRepository, never()).save(any());
         verify(productRepository, never()).save(any());
     }
 
@@ -155,7 +170,7 @@ class OrderServiceTest {
         when(orderRepository.findByRazorpayOrderId("order_MISSING")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> orderService.verifyPayment(
-                "order_MISSING", "pay_XYZ", sign("order_MISSING", "pay_XYZ")))
+                "buyer@test.com", "order_MISSING", "pay_XYZ", sign("order_MISSING", "pay_XYZ")))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
