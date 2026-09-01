@@ -11,8 +11,10 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
-# Run as an unprivileged user rather than root.
-RUN useradd --system --create-home --uid 10001 appuser \
+# Run as an unprivileged user rather than root. The group is created explicitly
+# rather than relying on useradd's implicit behaviour, which varies by base image.
+RUN groupadd --system --gid 10001 appuser \
+    && useradd --system --uid 10001 --gid 10001 --create-home appuser \
     && chown appuser:appuser /app/app.jar
 USER appuser
 

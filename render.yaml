@@ -6,9 +6,22 @@
 # `backend` there — otherwise Render looks for the Dockerfile at the repo root
 # and the build fails.
 #
-# NOTE: Render's free managed databases are PostgreSQL only. This app uses MySQL,
-# so provision a free external MySQL (Aiven / Railway / Clever Cloud) and paste its
-# connection details into the environment variables below via the Render dashboard.
+# The database below is provisioned by this Blueprint on Render's free tier, and
+# its connection string is injected as DATABASE_URL. The application translates
+# that postgres:// URL into a JDBC URL at startup (see
+# DatabaseUrlEnvironmentPostProcessor), so there is nothing to copy by hand.
+#
+# To use MySQL instead — which is what the project brief specifies — leave the
+# databases block out, provision a MySQL elsewhere (Aiven / Clever Cloud), and set
+# DB_URL, DB_USERNAME and DB_PASSWORD manually. An explicit DB_URL always takes
+# precedence over DATABASE_URL.
+
+databases:
+  - name: ecommerce-db
+    plan: free
+    databaseName: ecommerce
+    user: ecommerce
+
 services:
   - type: web
     name: ecommerce-backend
@@ -21,19 +34,19 @@ services:
     envVars:
       - key: PORT
         value: 8080
-      - key: DB_URL
-        sync: false   # Postgres: jdbc:postgresql://<host>:<port>/<db>
-      - key: DB_DRIVER
-        value: org.postgresql.Driver
-      - key: DB_USERNAME
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ecommerce-db
+          property: connectionString
       - key: JWT_SECRET
-        generateValue: true
+        generateValue: true          # generates a long value, safely over the 32-char minimum
+      - key: ADMIN_EMAIL
+        sync: false                  # your admin login
+      - key: ADMIN_PASSWORD
+        sync: false                  # set this — do not ship the built-in default
       - key: RAZORPAY_KEY_ID
         sync: false
       - key: RAZORPAY_KEY_SECRET
         sync: false
       - key: CORS_ALLOWED_ORIGINS
-        sync: false   # your Vercel URL, e.g. https://your-app.vercel.app
+        sync: false                  # your Vercel URL, e.g. https://your-app.vercel.app
