@@ -43,6 +43,30 @@ class DatabaseUrlEnvironmentPostProcessorTest {
     }
 
     @Test
+    void translatesNeonUrlAndDropsLibpqOnlyParameters() {
+        // Neon's connection strings carry channel_binding, which pgjdbc does not
+        // understand — it must be stripped while sslmode is preserved.
+        Map<String, Object> props = DatabaseUrlEnvironmentPostProcessor.translate(
+                "postgresql://neondb_owner:placeholder@ep-plain-mountain-ayg8g110-pooler"
+                        + ".c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require");
+
+        assertThat(props.get("spring.datasource.url")).isEqualTo(
+                "jdbc:postgresql://ep-plain-mountain-ayg8g110-pooler.c-5.us-east-2.aws.neon.tech"
+                        + ":5432/neondb?sslmode=require");
+        assertThat(props.get("spring.datasource.url").toString()).doesNotContain("channel_binding");
+        assertThat(props.get("spring.datasource.username")).isEqualTo("neondb_owner");
+        assertThat(props.get("spring.datasource.password")).isEqualTo("placeholder");
+    }
+
+    @Test
+    void dropsTheQueryStringEntirelyWhenOnlyLibpqParametersRemain() {
+        Map<String, Object> props = DatabaseUrlEnvironmentPostProcessor.translate(
+                "postgresql://u:p@host:5432/db?channel_binding=require");
+
+        assertThat(props.get("spring.datasource.url")).isEqualTo("jdbc:postgresql://host:5432/db");
+    }
+
+    @Test
     void decodesPercentEncodedCredentials() {
         Map<String, Object> props = DatabaseUrlEnvironmentPostProcessor.translate(
                 "postgres://user%40acme:p%40ss%3Aword@host:5432/db");

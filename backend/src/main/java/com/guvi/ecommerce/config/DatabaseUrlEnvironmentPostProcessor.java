@@ -58,8 +58,9 @@ public class DatabaseUrlEnvironmentPostProcessor implements EnvironmentPostProce
                 .append(port)
                 .append('/')
                 .append(database);
-        if (uri.getQuery() != null && !uri.getQuery().isBlank()) {
-            jdbcUrl.append('?').append(uri.getQuery());
+        String query = jdbcSafeQuery(uri.getQuery());
+        if (!query.isEmpty()) {
+            jdbcUrl.append('?').append(query);
         }
 
         Map<String, Object> properties = new HashMap<>();
@@ -76,6 +77,40 @@ public class DatabaseUrlEnvironmentPostProcessor implements EnvironmentPostProce
         }
         return properties;
     }
+
+    /**
+     * Managed Postgres providers hand out libpq-style connection strings, and some of
+     * those parameters have no JDBC equivalent — Neon, for example, appends
+     * {@code channel_binding=require}. Passing them through to the pgjdbc driver risks
+     * failing the connection, so they are dropped here. Recognised parameters such as
+     * {@code sslmode} are preserved, because managed providers require them.
+     */
+    private static String jdbcSafeQuery(String query) {
+        if (query == null || query.isBlank()) {
+            return "";
+        }
+        StringBuilder kept = new StringBuilder();
+        for (String param : query.split("&")) {
+            if (param.isBlank()) {
+                continue;
+            }
+            String name = param.contains("=") ? param.substring(0, param.indexOf('=')) : param;
+            if (LIBPQ_ONLY_PARAMETERS.contains(name.toLowerCase())) {
+                continue;
+            }
+            if (kept.length() > 0) {
+                kept.append('&');
+            }
+            kept.append(param);
+        }
+        return kept.toString();
+    }
+
+    private static final java.util.Set<String> LIBPQ_ONLY_PARAMETERS = java.util.Set.of(
+            "channel_binding",
+            "target_session_attrs",
+            "sslnegotiation",
+            "gssencmode");
 
     private static String decode(String value) {
         return URLDecoder.decode(value, StandardCharsets.UTF_8);

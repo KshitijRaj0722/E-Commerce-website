@@ -6,21 +6,16 @@
 # `backend` there — otherwise Render looks for the Dockerfile at the repo root
 # and the build fails.
 #
-# The database below is provisioned by this Blueprint on Render's free tier, and
-# its connection string is injected as DATABASE_URL. The application translates
-# that postgres:// URL into a JDBC URL at startup (see
-# DatabaseUrlEnvironmentPostProcessor), so there is nothing to copy by hand.
+# The database is NOT provisioned here. Render's free plan allows only one free
+# Postgres per account, and this account already has one, so a Blueprint-managed
+# database hangs indefinitely instead of failing cleanly. Provision Postgres
+# externally (Neon, Supabase) and paste its connection string into DATABASE_URL in
+# the Render dashboard. The application translates that postgres:// URL into a JDBC
+# URL at startup — see DatabaseUrlEnvironmentPostProcessor.
 #
-# To use MySQL instead — which is what the project brief specifies — leave the
-# databases block out, provision a MySQL elsewhere (Aiven / Clever Cloud), and set
-# DB_URL, DB_USERNAME and DB_PASSWORD manually. An explicit DB_URL always takes
-# precedence over DATABASE_URL.
-
-databases:
-  - name: ecommerce-db
-    plan: free
-    databaseName: ecommerce
-    user: ecommerce
+# To use MySQL instead — which is what the project brief specifies — set DB_URL,
+# DB_USERNAME and DB_PASSWORD instead of DATABASE_URL. An explicit DB_URL always
+# takes precedence.
 
 services:
   - type: web
@@ -35,9 +30,7 @@ services:
       - key: PORT
         value: 8080
       - key: DATABASE_URL
-        fromDatabase:
-          name: ecommerce-db
-          property: connectionString
+        sync: false                  # your Neon/Supabase postgres:// connection string
       - key: JWT_SECRET
         generateValue: true          # generates a long value, safely over the 32-char minimum
       - key: ADMIN_EMAIL
