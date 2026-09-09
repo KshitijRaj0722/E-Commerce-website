@@ -2,7 +2,18 @@ import axios from 'axios';
 
 // In production set REACT_APP_API_URL to your backend URL, e.g. https://ecommerce-backend.onrender.com/api
 // In development it falls back to '/api', which is proxied to localhost:8080 (see package.json "proxy").
-const api = axios.create({ baseURL: process.env.REACT_APP_API_URL || '/api' });
+
+// Every endpoint on the backend lives under /api. Setting REACT_APP_API_URL to just
+// the backend origin is an easy mistake, and its symptom is misleading: requests hit
+// an unmapped path, Spring answers 401 because unmatched routes require auth, and the
+// interceptor below bounces the user to /login as though their session expired. So
+// normalise the suffix here instead of relying on whoever sets the variable.
+export function normalizeBaseUrl(raw) {
+  const trimmed = String(raw).trim().replace(/\/+$/, '');
+  return /\/api$/.test(trimmed) ? trimmed : `${trimmed}/api`;
+}
+
+const api = axios.create({ baseURL: normalizeBaseUrl(process.env.REACT_APP_API_URL || '/api') });
 
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
